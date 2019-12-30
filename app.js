@@ -17,6 +17,8 @@ var start = false;
 // Niz kuglica
 var brojevi = [];
 
+
+// Kreira i mješa niz brojeva
 var shuffle = () => {
     let temp = [];
     for(let i = 1; i <= 45; i++){
@@ -38,7 +40,14 @@ io.on('connection', (socket) => {
         socket.on('START_COUNTER', () => {
             var cntrInt = setInterval(() => {
                 if(cntr <= 0){
-                    io.emit('NUMBERS', brojevi);
+                    let indeks = 0;
+                    let numbInt = setInterval(() => {
+                        let data = brojevi.slice(0, indeks);
+                        io.emit('NUMBER', data);
+                        indeks++;
+                        if(indeks >= brojevi.length)
+                            clearInterval(numbInt);
+                    }, 3000);
                     clearInterval(cntrInt);
                 }
                 io.emit('COUNTER', cntr);
