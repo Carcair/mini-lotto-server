@@ -8,17 +8,24 @@ const server = app.listen(port, () => {
 
 const io = require('socket.io')(server);
 
-// cntr predstavlja brojac prije početka runde
-var cntr = 120;
+// Counter variable
+var cntr = 119;
 
-// start je povezana sa početkom odbrojavanja (false ako nije započeto, true ako jeste)
-var start = false;
+// Variable which represents if counter was already started by one user
+// will be used to prevent other users to make conflicts in cntr value
+var startCounter = false;
 
-// Niz kuglica
+// Will be used in similiar fashion as start, it will represent the start of number draw
+var startRound = false;
+
+// End of number draw
+var finished = false;
+
+// Array of drawn numbers
 var brojevi = [];
 
 
-// Kreira i mješa niz brojeva
+// Creating and shuffling numbers
 var shuffle = () => {
     let temp = [];
     for(let i = 1; i <= 45; i++){
@@ -32,37 +39,45 @@ var shuffle = () => {
 }
 shuffle();
 
+// Send counter value, statement will get value from start var, so some part of code will
+// not be done depending on it
+var send_counter = (statement) => {
+    if(!statement)
+        startCounter = !startCounter;
+    
+    var cntrInt = setInterval(() => {
+        if(cntr <= 0){
+            clearInterval(cntrInt);
+        }
+        io.emit('COUNTER', cntr);
+        
+        if(!statement)
+            cntr--;
+    }, 1000);
+}
+
+// Sending numbers
+var send_numbers = (statement) => {
+    if(!statement){
+        startRound = !startRound;
+        for(let i = 0; i < 35; i++){
+            setTimeout(() => {
+                let data = brojevi.slice(0, i + 1);
+                io.emit('NUMBER', data);
+            }, 3000 + i * 3000);
+        }
+    }
+}
+
+// After connecting to this server from outside
 io.on('connection', (socket) => {
     console.log(socket.id);
     
-    if(!start){
-        start = !start;
-        socket.on('START_COUNTER', () => {
-            var cntrInt = setInterval(() => {
-                if(cntr <= 0){
-                    let indeks = 0;
-                    let numbInt = setInterval(() => {
-                        let data = brojevi.slice(0, indeks);
-                        io.emit('NUMBER', data);
-                        indeks++;
-                        if(indeks >= brojevi.length)
-                            clearInterval(numbInt);
-                    }, 3000);
-                    clearInterval(cntrInt);
-                }
-                io.emit('COUNTER', cntr);
-                cntr--;
-            }, 1000);
-        });
-    } else {
-        socket.on('START_COUNTER', () => {
-            let cntrIntTemp = setInterval(() => {
-                if(cntr == 0){
-                    clearInterval(cntrIntTemp);
-                }
-                io.emit('COUNTER', cntr);
-            }, 1000);
-        });
-    }
-    
+    socket.on('START_COUNTER', () => {
+        send_counter(startCounter);
+    })
+
+    socket.on('START_ROUND', () => {
+        send_numbers(startRound);
+    })
 });
