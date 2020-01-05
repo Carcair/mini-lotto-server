@@ -10,19 +10,17 @@ const io = require('socket.io')(server);
 
 // Counter variable
 var cntr = 119;
-
-// Variable which represents if counter was already started by one user
-// will be used to prevent other users to make conflicts in cntr value
-var startCounter = false;
-
-// Will be used in similiar fashion as start, it will represent the start of number draw
-var startRound = false;
-
-// End of number draw
-var finished = false;
-
 // Array of drawn numbers
 var brojevi = [];
+
+// State of application
+// 0 = not started
+// 1 = counter started
+// 2 = counter finished / draw started
+// 3 = sending numbers
+// 3 = draw finished
+// 4 = endgame
+var stanje = 0;
 
 
 // Creating and shuffling numbers
@@ -38,46 +36,73 @@ var shuffle = () => {
     brojevi = temp;
 }
 shuffle();
+//
 
 // Send counter value, statement will get value from start var, so some part of code will
 // not be done depending on it
-var send_counter = (statement) => {
-    if(!statement)
-        startCounter = !startCounter;
+var send_counter = () => {
+    if(stanje == 0) stanje = 1;
     
     var cntrInt = setInterval(() => {
         if(cntr <= 0){
+            stanje = 2
             clearInterval(cntrInt);
         }
         io.emit('COUNTER', cntr);
-        
-        if(!statement)
-            cntr--;
+        cntr--;
     }, 1000);
 }
 
 // Sending numbers
-var send_numbers = (statement) => {
-    if(!statement){
-        startRound = !startRound;
+var send_numbers = () => {
+    if(stanje == 2){
+        stanje = 3;
         for(let i = 0; i < 35; i++){
             setTimeout(() => {
                 let data = brojevi.slice(0, i + 1);
                 io.emit('NUMBER', data);
             }, 3000 + i * 3000);
+
+            if(i == 34) {
+                setTimeout(() => {
+                    stanje == 4;
+                    io.emit('ENDGAME');
+                }, 5000);
+            }
         }
+    } else if (stanje == 3 && stanje == 4 && stanje == 5) {
+        let data = brojevi.slice(0, 35);
+        io.emit('NUMBER', data);
     }
 }
 
 // After connecting to this server from outside
 io.on('connection', (socket) => {
     console.log(socket.id);
-    
-    socket.on('START_COUNTER', () => {
-        send_counter(startCounter);
-    })
 
-    socket.on('START_ROUND', () => {
-        send_numbers(startRound);
+    socket.on('CHECK_STATE', () => {
+        io.emit('STATE', stanje);
+    });
+    
+    socket.on('PLAY', () => {
+        switch(stanje){
+            case 0:
+                send_counter();
+                break;
+            case 1:
+                break;
+            case 2:
+                send_numbers();
+                break;
+            case 3:
+                send_numbers();
+                break;
+            case 4:
+                send_numbers();
+                break;
+            case 5:
+                send_numbers();
+                break;
+        }
     })
 });
