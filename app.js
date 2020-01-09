@@ -76,6 +76,10 @@ var send_numbers = () => {
     }
 }
 
+// Temporary array of objects, tickets with id's and combinations
+
+var tickets = [];
+
 // After connecting to this server from outside
 io.on('connection', (socket) => {
     console.log(socket.id);
@@ -104,5 +108,14 @@ io.on('connection', (socket) => {
                 send_numbers();
                 break;
         }
-    })
+    });
+
+    socket.on('TICKET', (data) => {
+        let tempObj = {};
+        let length = tickets.length + 1;
+        tempObj.id = socket.id + " - " + length;
+        tempObj.comb = data;
+        tickets.push(tempObj);
+        console.log(tickets);
+    });
 });
